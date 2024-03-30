@@ -37,7 +37,7 @@ for cnt in contours:
             if forma[1]==False:
                 condicao = 'AMASSADA'
             else:'''
-            inteira = esta_inteira(pill[0])
+            inteira = esta_inteira(pill[0]) #verifica se está inteira
             if inteira[1]==False:
                 condicao = 'QUEBRADA'
 
