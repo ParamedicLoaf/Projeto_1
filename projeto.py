@@ -5,8 +5,7 @@ import pandas as pd
 
 from projeto_funcs import *
 
-fig = cv2.imread("Arquivos_DESENVOLVIMENTO/teste_parcial.png", cv2.IMREAD_COLOR)
-#fig = reverse_mapping(fig,rot(np.pi/25))
+fig = cv2.imread("Arquivos_DESENVOLVIMENTO/quebrada_03.png", cv2.IMREAD_COLOR)
 
 #transforma em escala de cinza
 fig_grey = cv2.cvtColor(fig,cv2.COLOR_BGR2GRAY)
@@ -33,13 +32,13 @@ for cnt in contours:
         if cor[1]==False:
             condicao = 'COR'
         else:
-            '''forma = forma_ok(pill[0])
-            if forma[1]==False:
+            forma = forma_ok(pill[0])
+            if forma==False:
                 condicao = 'AMASSADA'
-            else:'''
-            inteira = esta_inteira(pill[0]) #verifica se está inteira
-            if inteira[1]==False:
-                condicao = 'QUEBRADA'
+            else:
+                inteira = esta_inteira(pill[0]) #verifica se está inteira
+                if inteira[1]==False:
+                    condicao = 'QUEBRADA'
 
         if condicao=='OK':
             w = pill[1]
@@ -50,9 +49,11 @@ for cnt in contours:
 
             data.append([condicao,x,y,w,h1,h2])
         else:
-            data.append([condicao,' ',' ',' ',' ',' '])
+            x = pill[3]
+            y = pill[4]
+            data.append([condicao,x,y,' ',' ',' '])
 
-print(i)
+print('pililas: ',i)
 
 # Create the pandas DataFrame
 df = pd.DataFrame(data, columns=['Status', 'Pos X', 'Pos Y', 'W','H1','H2'])

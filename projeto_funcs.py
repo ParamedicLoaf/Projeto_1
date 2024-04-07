@@ -3,33 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def rot(teta):
-    TH_rot = np.array( [[np.cos(teta),-np.sin(teta),0],
-                        [np.sin(teta), np.cos(teta),0],
-                        [0           ,0           ,1]], dtype = "float")
-    return TH_rot
-
-def reverse_mapping(fig,TH):
-    (h,w,z) = fig.shape
-    TH_inv = np.linalg.inv(TH)
-
-    #output
-    out = np.zeros((h,w,z), dtype = np.uint8)
-
-    for u in range(w):
-        for v in range(h):
-
-            p1 = np.array([u,v,1]).transpose()
-            p0 = np.matmul(TH_inv,p1)
-
-            x = int(p0[0]/p0[2])
-            y = int(p0[1]/p0[2])
-
-            if (x>=0) and(x<w) and (y>=0) and (y<h):
-                out[v,u] = fig[y,x]
-        
-    return out
-
 def extrai_pilula(image, angle, x,y,wi,hi): #extrai a pílula da imagem e corrige rotação
 
     if wi>hi:
@@ -67,7 +40,7 @@ def cor_certa(pill): #checa se a cor está certa
 
     return vermelho,cor,altura
 
-def esta_inteira(pill):
+def esta_inteira(pill): #verifica se está quebrada
     inteira = False
 
     #transforma em escala de cinza
@@ -75,24 +48,44 @@ def esta_inteira(pill):
     pillHue = cv2.cvtColor(pill,cv2.COLOR_BGR2HLS)[:,:,0]
 
     #obtém uma máscara e contornos
-    pill_mask = np.where(fig_grey>225,255,0).astype(np.uint8)
+    pill_mask = np.where(fig_grey>225,255,0).astype(np.uint8) #procura por áreas de pó branco dentro da figura
 
-    preto = np.where(fig_grey<60,255,0).astype(np.uint8)
+    preto = np.where(fig_grey<60,255,0).astype(np.uint8) #analisa a área preta da pílula
     contours, hierarchy = cv2.findContours(preto, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours2 = max(contours, key=lambda x: cv2.contourArea(x))
 
     i = 0
-    for cnt in contours:
+    for cnt in contours: # Conta quantos contornos pretos há na figura. Se for mais de 1, está quebrado
         if  (cv2.contourArea(cnt))>100: #filtra ruídos
             i = i+1
 
-    if np.sum(pill_mask)<5 and (cv2.contourArea(cv2.convexHull(contours2))-cv2.contourArea(contours2))<1900 and i==1:
+    if np.sum(pill_mask)<5 and (cv2.contourArea(cv2.convexHull(contours2))-cv2.contourArea(contours2))<5000 and i==1:
         inteira = True
 
-    print(np.sum(pill_mask))
-    print((cv2.contourArea(cv2.convexHull(contours2))-cv2.contourArea(contours2)))
-    print(i)
+    #print(np.sum(pill_mask))
+    #print((cv2.contourArea(cv2.convexHull(contours2))-cv2.contourArea(contours2)))
+    #print(i)
 
     return pill_mask,inteira,preto
 
 
+
+def forma_ok(fig): # verifica se está amassada
+    fig_grey = cv2.cvtColor(fig,cv2.COLOR_BGR2GRAY)
+
+    h,w = fig_grey.shape #dimensão da figura 
+    fig_bw = np.where((fig_grey<130),255,0).astype(np.uint8) #pega apenas a pilular para ver seu formato
+
+    contours, _ = cv2.findContours(fig_bw, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    for cnt in contours:
+        if (cv2.contourArea(cnt)>6000): #filtra ruídos
+            hull = cv2.convexHull(cnt)
+            difference = abs(cv2.contourArea(hull)-w*h) #analisa a differença de área entre a área total e a área da pílula
+
+            #print('diferenca: ',difference)
+
+            if difference > 25000 or difference < 21000: #Como a imagem fig vêm de extrai pílula, os valores entre a área total e a área da pílula são conhecidos
+                return False
+            else:
+                return True
