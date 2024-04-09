@@ -48,21 +48,39 @@ def esta_inteira(pill): #verifica se está quebrada
     pillHue = cv2.cvtColor(pill,cv2.COLOR_BGR2HLS)[:,:,0]
 
     #obtém uma máscara e contornos
-    pill_mask = np.where(fig_grey>225,255,0).astype(np.uint8) #procura por áreas de pó branco dentro da figura
+    pill_mask = np.where(fig_grey>237,255,0).astype(np.uint8) #procura por áreas de pó branco dentro da figura
 
     preto = np.where(fig_grey<60,255,0).astype(np.uint8) #analisa a área preta da pílula
+    
+    '''
+    kernel = np.ones((3,3),np.uint8)
+    preto = cv2.dilate(preto,kernel,iterations = 3) 
+    preto = cv2.erode(preto,kernel,iterations = 1)'''
+
     contours, hierarchy = cv2.findContours(preto, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours2 = max(contours, key=lambda x: cv2.contourArea(x))
 
     i = 0
     for cnt in contours: # Conta quantos contornos pretos há na figura. Se for mais de 1, está quebrado
-        if  (cv2.contourArea(cnt))>100: #filtra ruídos
+        if  (cv2.contourArea(cnt))>500: #filtra ruídos
             i = i+1
 
-    if np.sum(pill_mask)<5 and (cv2.contourArea(cv2.convexHull(contours2))-cv2.contourArea(contours2))<5000 and i==1:
+    distances =[]
+    hull = cv2.convexHull(contours2, returnPoints=False)
+    defects = cv2.convexityDefects(contours2,hull)
+
+    for j in range(defects.shape[0]):  # calculate the angle
+        s, e, f, d = defects[j][0]
+        distances.append(d)
+
+    if np.sum(pill_mask)<5 and max(distances)<4000 and i==1:
         inteira = True
 
+    
+    #cv2.imshow("Img1 with keypoints",preto)
+    #cv2.waitKey(0)
     #print(np.sum(pill_mask))
+    #print(max(distances))
     #print((cv2.contourArea(cv2.convexHull(contours2))-cv2.contourArea(contours2)))
     #print(i)
 
@@ -85,7 +103,55 @@ def forma_ok(fig): # verifica se está amassada
 
             #print('diferenca: ',difference)
 
-            if difference > 25000 or difference < 21000: #Como a imagem fig vêm de extrai pílula, os valores entre a área total e a área da pílula são conhecidos
+            if difference > 6750 or difference < 5250: #Como a imagem fig vêm de extrai pílula, os valores entre a área total e a área da pílula são conhecidos
                 return False
             else:
                 return True
+            
+def sem_riscos(fig):
+    fig_S = cv2.cvtColor(fig,cv2.COLOR_BGR2HLS)[:,:,2]
+    fig_H = cv2.cvtColor(fig,cv2.COLOR_BGR2HLS)[:,:,0]
+    fig_gray = cv2.cvtColor(fig,cv2.COLOR_BGR2GRAY)
+    
+    sobelX = cv2.Sobel(fig_gray, cv2.CV_16S, 1, 0)
+    sobelX = np.uint8(np.absolute(sobelX))
+    sobelX = cv2.convertScaleAbs(sobelX)
+
+    sobelY = cv2.Sobel(fig_gray, cv2.CV_16S, 0, 1)
+    sobelY = np.uint8(np.absolute(sobelY))
+    sobelY = cv2.convertScaleAbs(sobelY)
+
+    sobel = sobelX+sobelY
+
+    
+
+    fig_vermelho = np.where((fig_H>3) & (fig_H<8),255,0).astype(np.uint8)
+    #fig_vermelho = np.where((fig_H>65) & (fig_H<100),255,0).astype(np.uint8)
+    fig_vermelho = cv2.dilate(fig_vermelho,np.ones((2,2),np.uint8),iterations=3)
+    fig_vermelho = cv2.erode(fig_vermelho,np.ones((3,3),np.uint8),iterations=5)
+
+    #sobelX = cv2.Sobel(fig_gray, cv2.CV_16S, 1, 0)
+    #sobelX = np.uint8(np.absolute(sobelX))
+    #sobelX = cv2.convertScaleAbs(sobelX)
+
+    #risco = np.where((fig_vermelho>100),sobelX,0).astype(np.uint8)
+    
+    riscos = np.where((sobel>40)&(fig_vermelho>100),255,0).astype(np.uint8)
+
+    contours, _ = cv2.findContours(riscos, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    areas = []
+    for cnt in contours:
+        areas.append(cv2.contourArea(cnt))
+
+    #areas = areas.sort(reverse=True)
+    result = sorted(areas, reverse=True)
+    result = result[6:]
+    print(sum(result))
+    cv2.imshow("Img1 with keypoints",riscos)
+    cv2.waitKey(0)
+
+    if sum(result) > 800:
+        return False
+    else:
+        return True
