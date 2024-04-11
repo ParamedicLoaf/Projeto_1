@@ -5,7 +5,7 @@ import pandas as pd
 
 from projeto_funcs import *
 
-fig = cv2.imread("Imagens_TESTE_VALIDACAO/Imagem_VALIDACAO_2.png", cv2.IMREAD_COLOR)
+fig = cv2.imread("Imagens_TESTE_VALIDACAO/Imagem_VALIDACAO_3.png", cv2.IMREAD_COLOR)
 
 #transforma em escala de cinza
 fig_grey = cv2.cvtColor(fig,cv2.COLOR_BGR2GRAY)
@@ -25,8 +25,8 @@ for cnt in contours:
         #print('angle:',angle, ' x:',x,' y:',y,' w:',w,' h:',h) #DEBUG
 
         pill = extrai_pilula(fig,angle,x,y,w,h) #extrai a pílula, corrigindo rotação
-        cv2.imshow("Img1 with keypoints",pill[0])
-        cv2.waitKey(0)
+        #cv2.imshow("Img1 with keypoints",pill[0])
+        #cv2.waitKey(0)
 
         condicao = 'OK'
         cor = cor_certa(pill[0]) #verifica se a cor está certa

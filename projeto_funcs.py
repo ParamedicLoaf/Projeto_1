@@ -109,10 +109,11 @@ def forma_ok(fig): # verifica se está amassada
                 return True
             
 def sem_riscos(fig):
-    fig_S = cv2.cvtColor(fig,cv2.COLOR_BGR2HLS)[:,:,2]
-    fig_H = cv2.cvtColor(fig,cv2.COLOR_BGR2HLS)[:,:,0]
-    fig_gray = cv2.cvtColor(fig,cv2.COLOR_BGR2GRAY)
     
+    fig_H = cv2.cvtColor(fig,cv2.COLOR_BGR2HLS)[:,:,0] #Hue
+    fig_gray = cv2.cvtColor(fig,cv2.COLOR_BGR2GRAY) #cinza
+    
+    #contornos em derivada
     sobelX = cv2.Sobel(fig_gray, cv2.CV_16S, 1, 0)
     sobelX = np.uint8(np.absolute(sobelX))
     sobelX = cv2.convertScaleAbs(sobelX)
@@ -124,18 +125,13 @@ def sem_riscos(fig):
     sobel = sobelX+sobelY
 
     
-
+    # pega a região vermelha
     fig_vermelho = np.where((fig_H>3) & (fig_H<8),255,0).astype(np.uint8)
-    #fig_vermelho = np.where((fig_H>65) & (fig_H<100),255,0).astype(np.uint8)
+    
     fig_vermelho = cv2.dilate(fig_vermelho,np.ones((2,2),np.uint8),iterations=3)
     fig_vermelho = cv2.erode(fig_vermelho,np.ones((3,3),np.uint8),iterations=5)
 
-    #sobelX = cv2.Sobel(fig_gray, cv2.CV_16S, 1, 0)
-    #sobelX = np.uint8(np.absolute(sobelX))
-    #sobelX = cv2.convertScaleAbs(sobelX)
-
-    #risco = np.where((fig_vermelho>100),sobelX,0).astype(np.uint8)
-    
+    # considera riscos apenas na região vermelha
     riscos = np.where((sobel>40)&(fig_vermelho>100),255,0).astype(np.uint8)
 
     contours, _ = cv2.findContours(riscos, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -144,13 +140,11 @@ def sem_riscos(fig):
     for cnt in contours:
         areas.append(cv2.contourArea(cnt))
 
-    #areas = areas.sort(reverse=True)
+    # ignora as 6 maiores áreas (provenientes dos números e contornos da pílula)
     result = sorted(areas, reverse=True)
     result = result[6:]
-    print(sum(result))
-    cv2.imshow("Img1 with keypoints",riscos)
-    cv2.waitKey(0)
 
+    # soma as áreas e usa o resultado para determinar riscadas
     if sum(result) > 800:
         return False
     else:
